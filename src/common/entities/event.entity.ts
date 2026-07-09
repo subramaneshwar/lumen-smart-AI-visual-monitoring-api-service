@@ -1,4 +1,11 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Organization } from './organization.entity';
 import { Camera } from './camera.entity';
 import { Person } from './person.entity';
@@ -42,7 +49,12 @@ export class Event {
   @Column({ type: 'text', nullable: true })
   description: string | null;
 
-  @Column({ type: 'vector' as any, nullable: true, transformer: vectorTransformer })
+  @Column({
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    type: 'vector' as any,
+    nullable: true,
+    transformer: vectorTransformer,
+  })
   description_embedding: number[] | null;
 
   @Column({ type: 'text', nullable: true })

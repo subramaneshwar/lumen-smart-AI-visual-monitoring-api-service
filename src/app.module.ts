@@ -13,7 +13,18 @@ import { ChatModule } from './chat/chat.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({
-  imports: [CommonModule, HealthModule, IngestionModule, EventsModule, RulesModule, PersonsModule, NotificationsModule, SummariesModule, ChatModule, AuthModule],
+  imports: [
+    CommonModule,
+    HealthModule,
+    IngestionModule,
+    EventsModule,
+    RulesModule,
+    PersonsModule,
+    NotificationsModule,
+    SummariesModule,
+    ChatModule,
+    AuthModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

@@ -19,9 +19,12 @@ describe('Health (e2e)', () => {
   });
 
   it('/health (GET) reports database and redis as up', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const response = await request(app.getHttpServer()).get('/health');
     expect(response.status).toBe(200);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.info.database.status).toBe('up');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.info.redis.status).toBe('up');
   });
 });

@@ -18,7 +18,9 @@ describe('RulesController', () => {
       throw new Error('expected findAll to throw');
     } catch (err) {
       expect(err).toBeInstanceOf(HttpException);
-      expect((err as HttpException).getStatus()).toBe(HttpStatus.NOT_IMPLEMENTED);
+      expect((err as HttpException).getStatus()).toBe(
+        HttpStatus.NOT_IMPLEMENTED,
+      );
     }
   });
 });

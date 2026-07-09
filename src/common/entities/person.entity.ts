@@ -1,4 +1,10 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Organization } from './organization.entity';
 import { vectorTransformer } from '../vector.transformer';
 
@@ -14,7 +20,12 @@ export class Person {
   @Column({ type: 'text', nullable: true })
   label: string | null;
 
-  @Column({ type: 'vector' as any, nullable: true, transformer: vectorTransformer })
+  @Column({
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    type: 'vector' as any,
+    nullable: true,
+    transformer: vectorTransformer,
+  })
   face_embedding: number[] | null;
 
   @Column({ type: 'timestamptz', nullable: true })
