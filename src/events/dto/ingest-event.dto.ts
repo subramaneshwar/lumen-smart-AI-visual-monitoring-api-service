@@ -19,8 +19,9 @@ export class IngestEventDto {
   @Max(1)
   confidence: number;
 
+  @IsOptional()
   @IsString()
-  clip_path: string;
+  clip_path?: string;
 
   @IsOptional()
   @IsString()

@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { EventsService } from './events.service';
+import { RulesService } from '../rules/rules.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Event } from '../common/entities/event.entity';
 import { Camera } from '../common/entities/camera.entity';
 
@@ -9,6 +11,8 @@ describe('EventsService', () => {
   let service: EventsService;
   const mockCamerasRepo = { findOne: jest.fn() };
   const mockEventsRepo = { create: jest.fn(), save: jest.fn() };
+  const mockRulesService = { evaluate: jest.fn() };
+  const mockNotificationsService = { sendTextAlert: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -17,6 +21,8 @@ describe('EventsService', () => {
         EventsService,
         { provide: getRepositoryToken(Event), useValue: mockEventsRepo },
         { provide: getRepositoryToken(Camera), useValue: mockCamerasRepo },
+        { provide: RulesService, useValue: mockRulesService },
+        { provide: NotificationsService, useValue: mockNotificationsService },
       ],
     }).compile();
     service = module.get<EventsService>(EventsService);
@@ -40,9 +46,11 @@ describe('EventsService', () => {
     mockEventsRepo.create.mockImplementation(
       (data: Record<string, unknown>) => data,
     );
-    mockEventsRepo.save.mockImplementation((data: Record<string, unknown>) =>
-      Promise.resolve({ id: 'evt-1', ...data } as Event),
-    );
+    mockRulesService.evaluate.mockResolvedValue('record_only');
+
+    const saveImplementation = (data: Record<string, unknown>) =>
+      Promise.resolve({ id: 'evt-1', ...data } as Event);
+    mockEventsRepo.save.mockImplementation(saveImplementation);
 
     const result = await service.ingest({
       camera_id: 'cam-1',
@@ -59,8 +67,14 @@ describe('EventsService', () => {
         confidence: 0.9,
       }),
     );
+    expect(mockEventsRepo.save).toHaveBeenCalledTimes(2);
+    expect(mockRulesService.evaluate).toHaveBeenCalled();
     expect(result).toEqual(
-      expect.objectContaining({ id: 'evt-1', event_type: 'person' }),
+      expect.objectContaining({
+        id: 'evt-1',
+        event_type: 'person',
+        action_taken: 'record_only',
+      }),
     );
   });
 });
