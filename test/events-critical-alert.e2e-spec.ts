@@ -218,4 +218,34 @@ describe('Events critical-alert flow (e2e)', () => {
     );
     expect(notificationLogs).toEqual([]);
   });
+
+  it('POST /events/clips skips a malformed event id instead of failing the whole request', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const ingestResponse = await request(app.getHttpServer())
+      .post('/events/ingest')
+      .send({
+        camera_id: cameraId,
+        event_type: 'cat',
+        confidence: 0.6,
+      });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment
+    const eventId: string = ingestResponse.body.id;
+    const unknownEventId = '00000000-0000-0000-0000-000000000000';
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const clipResponse = await request(app.getHttpServer())
+      .post('/events/clips')
+      .field('event_ids', `not-a-uuid,${unknownEventId},${eventId}`)
+      .attach('clip', Buffer.from('fake video bytes'), 'clip.mp4');
+
+    expect(clipResponse.status).toBe(201);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const updated = await dataSource.query(
+      'SELECT clip_path FROM events WHERE id = $1',
+      [eventId],
+    );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    expect(updated[0].clip_path).toContain('.mp4');
+  });
 });

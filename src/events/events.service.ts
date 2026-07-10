@@ -65,10 +65,18 @@ export class EventsService {
 
   async attachClip(eventIds: string[], filePath: string): Promise<void> {
     for (const eventId of eventIds) {
-      const event = await this.events.findOne({
-        where: { id: eventId },
-        relations: { organization: true, camera: true },
-      });
+      let event: Event | null;
+      try {
+        event = await this.events.findOne({
+          where: { id: eventId },
+          relations: { organization: true, camera: true },
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Skipping invalid event id ${eventId}: ${(error as Error).message}`,
+        );
+        continue;
+      }
       if (!event) {
         continue;
       }
