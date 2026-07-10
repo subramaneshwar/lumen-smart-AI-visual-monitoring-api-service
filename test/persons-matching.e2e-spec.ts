@@ -143,6 +143,7 @@ describe('Person matching (e2e)', () => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(Number(after[0].count)).toBe(Number(before[0].count) + 1);
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const newPersonRow = await dataSource.query(
       'SELECT face_embedding FROM persons WHERE org_id = $1 AND id != $2',
       [orgId, knownPersonId],
