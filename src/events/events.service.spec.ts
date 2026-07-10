@@ -77,4 +77,33 @@ describe('EventsService', () => {
       }),
     );
   });
+
+  it('still returns the saved event when rule evaluation throws', async () => {
+    const camera = { id: 'cam-1', organization: { id: 'org-1' } } as Camera;
+    mockCamerasRepo.findOne.mockResolvedValue(camera);
+    mockEventsRepo.create.mockImplementation(
+      (data: Record<string, unknown>) => data,
+    );
+    mockRulesService.evaluate.mockRejectedValue(new Error('db unavailable'));
+
+    const saveImplementation = (data: Record<string, unknown>) =>
+      Promise.resolve({ id: 'evt-1', ...data } as Event);
+    mockEventsRepo.save.mockImplementation(saveImplementation);
+
+    const result = await service.ingest({
+      camera_id: 'cam-1',
+      event_type: 'person',
+      confidence: 0.9,
+      clip_path: 'x.mp4',
+    });
+
+    expect(mockRulesService.evaluate).toHaveBeenCalled();
+    expect(mockNotificationsService.sendTextAlert).not.toHaveBeenCalled();
+    expect(result).toEqual(
+      expect.objectContaining({
+        id: 'evt-1',
+        event_type: 'person',
+      }),
+    );
+  });
 });

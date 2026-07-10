@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Event } from '../common/entities/event.entity';
@@ -9,6 +9,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class EventsService {
+  private readonly logger = new Logger(EventsService.name);
+
   constructor(
     @InjectRepository(Event) private readonly events: Repository<Event>,
     @InjectRepository(Camera) private readonly cameras: Repository<Camera>,
@@ -34,11 +36,17 @@ export class EventsService {
     });
     const saved = await this.events.save(event);
 
-    saved.action_taken = await this.rulesService.evaluate(saved);
-    await this.events.save(saved);
+    try {
+      saved.action_taken = await this.rulesService.evaluate(saved);
+      await this.events.save(saved);
 
-    if (saved.action_taken === 'critical_alert') {
-      await this.notificationsService.sendTextAlert(saved);
+      if (saved.action_taken === 'critical_alert') {
+        await this.notificationsService.sendTextAlert(saved);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Rule evaluation/notification failed for event ${saved.id}: ${(error as Error).message}`,
+      );
     }
 
     return saved;
