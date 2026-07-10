@@ -132,6 +132,8 @@ describe('Person matching (e2e)', () => {
       });
 
     expect(response.status).toBe(201);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    expect(response.body.person.face_embedding).toBeFalsy();
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const after = await dataSource.query(
@@ -140,6 +142,13 @@ describe('Person matching (e2e)', () => {
     );
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(Number(after[0].count)).toBe(Number(before[0].count) + 1);
+
+    const newPersonRow = await dataSource.query(
+      'SELECT face_embedding FROM persons WHERE org_id = $1 AND id != $2',
+      [orgId, knownPersonId],
+    );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    expect(newPersonRow[0].face_embedding).not.toBeNull();
   });
 
   it('leaves person null when no face_embedding is sent', async () => {
