@@ -4,6 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { EventsService } from './events.service';
 import { RulesService } from '../rules/rules.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PersonsService } from '../persons/persons.service';
 import { Event } from '../common/entities/event.entity';
 import { Camera } from '../common/entities/camera.entity';
 
@@ -13,6 +14,7 @@ describe('EventsService', () => {
   const mockEventsRepo = { create: jest.fn(), save: jest.fn() };
   const mockRulesService = { evaluate: jest.fn() };
   const mockNotificationsService = { sendTextAlert: jest.fn() };
+  const mockPersonsService = { matchOrCreate: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -23,6 +25,7 @@ describe('EventsService', () => {
         { provide: getRepositoryToken(Camera), useValue: mockCamerasRepo },
         { provide: RulesService, useValue: mockRulesService },
         { provide: NotificationsService, useValue: mockNotificationsService },
+        { provide: PersonsService, useValue: mockPersonsService },
       ],
     }).compile();
     service = module.get<EventsService>(EventsService);

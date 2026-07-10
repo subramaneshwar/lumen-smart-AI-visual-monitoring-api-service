@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsNumber,
   IsOptional,
   IsString,
@@ -26,4 +27,9 @@ export class IngestEventDto {
   @IsOptional()
   @IsString()
   zone?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsNumber({}, { each: true })
+  face_embedding?: number[];
 }

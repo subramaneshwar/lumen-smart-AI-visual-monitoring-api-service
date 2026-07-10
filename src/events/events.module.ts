@@ -8,12 +8,14 @@ import { Organization } from '../common/entities/organization.entity';
 import { Person } from '../common/entities/person.entity';
 import { RulesModule } from '../rules/rules.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { PersonsModule } from '../persons/persons.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Event, Camera, Organization, Person]),
     RulesModule,
     NotificationsModule,
+    PersonsModule,
   ],
   controllers: [EventsController],
   providers: [EventsService],

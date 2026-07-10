@@ -9,6 +9,7 @@ import { Camera } from '../common/entities/camera.entity';
 import { IngestEventDto } from './dto/ingest-event.dto';
 import { RulesService } from '../rules/rules.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PersonsService } from '../persons/persons.service';
 
 @Injectable()
 export class EventsService {
@@ -19,6 +20,7 @@ export class EventsService {
     @InjectRepository(Camera) private readonly cameras: Repository<Camera>,
     private readonly rulesService: RulesService,
     private readonly notificationsService: NotificationsService,
+    private readonly personsService: PersonsService,
   ) {}
 
   async ingest(dto: IngestEventDto): Promise<Event> {
@@ -36,6 +38,7 @@ export class EventsService {
       confidence: dto.confidence,
       clip_path: dto.clip_path ?? null,
       zone: dto.zone ?? null,
+      person: null,
     });
     const saved = await this.events.save(event);
 
@@ -50,6 +53,21 @@ export class EventsService {
       this.logger.error(
         `Rule evaluation/notification failed for event ${saved.id}: ${(error as Error).message}`,
       );
+    }
+
+    if (dto.face_embedding) {
+      try {
+        const person = await this.personsService.matchOrCreate(
+          dto.face_embedding,
+          camera.organization.id,
+        );
+        saved.person = person;
+        await this.events.save(saved);
+      } catch (error) {
+        this.logger.error(
+          `Person matching failed for event ${saved.id}: ${(error as Error).message}`,
+        );
+      }
     }
 
     return saved;
