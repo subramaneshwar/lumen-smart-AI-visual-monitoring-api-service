@@ -1,6 +1,9 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as fs from 'fs';
+import * as path from 'path';
+import { randomUUID } from 'crypto';
 import { Event } from '../common/entities/event.entity';
 import { Camera } from '../common/entities/camera.entity';
 import { IngestEventDto } from './dto/ingest-event.dto';
@@ -50,5 +53,31 @@ export class EventsService {
     }
 
     return saved;
+  }
+
+  saveClipFile(file: Express.Multer.File): string {
+    const clipsDir = path.join(process.cwd(), 'storage', 'clips');
+    fs.mkdirSync(clipsDir, { recursive: true });
+    const savedPath = path.join(clipsDir, `${randomUUID()}.mp4`);
+    fs.writeFileSync(savedPath, file.buffer);
+    return savedPath;
+  }
+
+  async attachClip(eventIds: string[], filePath: string): Promise<void> {
+    for (const eventId of eventIds) {
+      const event = await this.events.findOne({
+        where: { id: eventId },
+        relations: { organization: true, camera: true },
+      });
+      if (!event) {
+        continue;
+      }
+      event.clip_path = filePath;
+      await this.events.save(event);
+
+      if (event.action_taken === 'critical_alert') {
+        await this.notificationsService.sendVideoAlert(event, filePath);
+      }
+    }
   }
 }

@@ -139,4 +139,83 @@ describe('Events critical-alert flow (e2e)', () => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.clip_path).toBeNull();
   });
+
+  it('POST /events/clips attaches the file and sends a video alert for a critical_alert event', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const ingestResponse = await request(app.getHttpServer())
+      .post('/events/ingest')
+      .send({
+        camera_id: cameraId,
+        event_type: 'person',
+        confidence: 0.95,
+      });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment
+    const eventId: string = ingestResponse.body.id;
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const clipResponse = await request(app.getHttpServer())
+      .post('/events/clips')
+      .field('event_ids', eventId)
+      .attach('clip', Buffer.from('fake video bytes'), 'clip.mp4');
+
+    expect(clipResponse.status).toBe(201);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const updated = await dataSource.query(
+      'SELECT clip_path FROM events WHERE id = $1',
+      [eventId],
+    );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    expect(updated[0].clip_path).toContain('.mp4');
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const notificationLogs = await dataSource.query(
+      'SELECT channel, status FROM notifications_log WHERE event_id = $1 ORDER BY sent_at',
+      [eventId],
+    );
+    expect(notificationLogs).toEqual([
+      { channel: 'telegram', status: 'sent' }, // text alert from ingest
+      { channel: 'telegram', status: 'sent' }, // video alert from clip attach
+    ]);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/sendVideo'),
+      expect.anything(),
+    );
+  });
+
+  it('POST /events/clips attaches the file but sends no video alert for a record_only event', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const ingestResponse = await request(app.getHttpServer())
+      .post('/events/ingest')
+      .send({
+        camera_id: cameraId,
+        event_type: 'cat',
+        confidence: 0.6,
+      });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment
+    const eventId: string = ingestResponse.body.id;
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const clipResponse = await request(app.getHttpServer())
+      .post('/events/clips')
+      .field('event_ids', eventId)
+      .attach('clip', Buffer.from('fake video bytes'), 'clip.mp4');
+
+    expect(clipResponse.status).toBe(201);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const updated = await dataSource.query(
+      'SELECT clip_path FROM events WHERE id = $1',
+      [eventId],
+    );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    expect(updated[0].clip_path).toContain('.mp4');
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const notificationLogs = await dataSource.query(
+      'SELECT channel FROM notifications_log WHERE event_id = $1',
+      [eventId],
+    );
+    expect(notificationLogs).toEqual([]);
+  });
 });
