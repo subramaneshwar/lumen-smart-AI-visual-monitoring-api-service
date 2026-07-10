@@ -63,6 +63,7 @@ export class EventsService {
         );
         saved.person = person;
         await this.events.save(saved);
+        saved.person = { ...person, face_embedding: null };
       } catch (error) {
         this.logger.error(
           `Person matching failed for event ${saved.id}: ${(error as Error).message}`,

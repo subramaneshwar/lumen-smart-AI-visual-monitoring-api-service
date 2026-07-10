@@ -91,14 +91,18 @@ describe('Person matching (e2e)', () => {
       });
 
     expect(response.status).toBe(201);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    expect(response.body.person.face_embedding).toBeFalsy();
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const persons = await dataSource.query(
-      'SELECT visit_count FROM persons WHERE id = $1',
+      'SELECT visit_count, face_embedding FROM persons WHERE id = $1',
       [knownPersonId],
     );
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(persons[0].visit_count).toBe(2);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    expect(persons[0].face_embedding).not.toBeNull();
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const events = await dataSource.query(
