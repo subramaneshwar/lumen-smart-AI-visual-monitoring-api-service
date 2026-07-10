@@ -38,7 +38,12 @@ export class RulesService {
 
   private parseConfig(rule: Rule): RuleConfig | null {
     const config = rule.config as Partial<RuleConfig>;
-    if (!config || typeof config !== 'object' || !config.conditions || !config.action) {
+    if (
+      !config ||
+      typeof config !== 'object' ||
+      !config.conditions ||
+      !config.action
+    ) {
       this.logger.warn(`Rule ${rule.id} has malformed config, skipping`);
       return null;
     }
@@ -46,16 +51,25 @@ export class RulesService {
   }
 
   private matches(conditions: RuleConditions, event: Event): boolean {
-    if (conditions.detected_type && conditions.detected_type !== event.event_type) {
+    if (
+      conditions.detected_type &&
+      conditions.detected_type !== event.event_type
+    ) {
       return false;
     }
-    if (conditions.time_range && !this.withinTimeRange(event.created_at, conditions.time_range)) {
+    if (
+      conditions.time_range &&
+      !this.withinTimeRange(event.created_at, conditions.time_range)
+    ) {
       return false;
     }
     return true;
   }
 
-  private withinTimeRange(date: Date, range: { start: string; end: string }): boolean {
+  private withinTimeRange(
+    date: Date,
+    range: { start: string; end: string },
+  ): boolean {
     const startMinutes = this.parseTimeToMinutes(range.start);
     const endMinutes = this.parseTimeToMinutes(range.end);
     if (startMinutes === null || endMinutes === null) {

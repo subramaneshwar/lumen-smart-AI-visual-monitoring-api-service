@@ -36,7 +36,13 @@ describe('RulesService', () => {
 
   it('returns critical_alert when detected_type matches', async () => {
     mockRulesRepo.find.mockResolvedValue([
-      { id: 'rule-1', config: { conditions: { detected_type: 'person' }, action: 'critical_alert' } },
+      {
+        id: 'rule-1',
+        config: {
+          conditions: { detected_type: 'person' },
+          action: 'critical_alert',
+        },
+      },
     ]);
     const result = await service.evaluate(makeEvent({ event_type: 'person' }));
     expect(result).toBe('critical_alert');
@@ -44,7 +50,13 @@ describe('RulesService', () => {
 
   it('returns record_only when detected_type does not match', async () => {
     mockRulesRepo.find.mockResolvedValue([
-      { id: 'rule-1', config: { conditions: { detected_type: 'person' }, action: 'critical_alert' } },
+      {
+        id: 'rule-1',
+        config: {
+          conditions: { detected_type: 'person' },
+          action: 'critical_alert',
+        },
+      },
     ]);
     const result = await service.evaluate(makeEvent({ event_type: 'dog' }));
     expect(result).toBe('record_only');
@@ -54,10 +66,15 @@ describe('RulesService', () => {
     mockRulesRepo.find.mockResolvedValue([
       {
         id: 'rule-1',
-        config: { conditions: { time_range: { start: '09:00', end: '17:00' } }, action: 'critical_alert' },
+        config: {
+          conditions: { time_range: { start: '09:00', end: '17:00' } },
+          action: 'critical_alert',
+        },
       },
     ]);
-    const result = await service.evaluate(makeEvent({ created_at: new Date(2026, 0, 1, 10, 0, 0) }));
+    const result = await service.evaluate(
+      makeEvent({ created_at: new Date(2026, 0, 1, 10, 0, 0) }),
+    );
     expect(result).toBe('critical_alert');
   });
 
@@ -65,10 +82,15 @@ describe('RulesService', () => {
     mockRulesRepo.find.mockResolvedValue([
       {
         id: 'rule-1',
-        config: { conditions: { time_range: { start: '09:00', end: '17:00' } }, action: 'critical_alert' },
+        config: {
+          conditions: { time_range: { start: '09:00', end: '17:00' } },
+          action: 'critical_alert',
+        },
       },
     ]);
-    const result = await service.evaluate(makeEvent({ created_at: new Date(2026, 0, 1, 20, 0, 0) }));
+    const result = await service.evaluate(
+      makeEvent({ created_at: new Date(2026, 0, 1, 20, 0, 0) }),
+    );
     expect(result).toBe('record_only');
   });
 
@@ -76,10 +98,15 @@ describe('RulesService', () => {
     mockRulesRepo.find.mockResolvedValue([
       {
         id: 'rule-1',
-        config: { conditions: { time_range: { start: '23:00', end: '06:00' } }, action: 'critical_alert' },
+        config: {
+          conditions: { time_range: { start: '23:00', end: '06:00' } },
+          action: 'critical_alert',
+        },
       },
     ]);
-    const result = await service.evaluate(makeEvent({ created_at: new Date(2026, 0, 1, 2, 0, 0) }));
+    const result = await service.evaluate(
+      makeEvent({ created_at: new Date(2026, 0, 1, 2, 0, 0) }),
+    );
     expect(result).toBe('critical_alert');
   });
 
@@ -87,15 +114,22 @@ describe('RulesService', () => {
     mockRulesRepo.find.mockResolvedValue([
       {
         id: 'rule-1',
-        config: { conditions: { time_range: { start: '23:00', end: '06:00' } }, action: 'critical_alert' },
+        config: {
+          conditions: { time_range: { start: '23:00', end: '06:00' } },
+          action: 'critical_alert',
+        },
       },
     ]);
-    const result = await service.evaluate(makeEvent({ created_at: new Date(2026, 0, 1, 12, 0, 0) }));
+    const result = await service.evaluate(
+      makeEvent({ created_at: new Date(2026, 0, 1, 12, 0, 0) }),
+    );
     expect(result).toBe('record_only');
   });
 
   it('skips a rule with malformed config and falls through to the default', async () => {
-    mockRulesRepo.find.mockResolvedValue([{ id: 'rule-1', config: { foo: 'bar' } }]);
+    mockRulesRepo.find.mockResolvedValue([
+      { id: 'rule-1', config: { foo: 'bar' } },
+    ]);
     const result = await service.evaluate(makeEvent());
     expect(result).toBe('record_only');
   });
