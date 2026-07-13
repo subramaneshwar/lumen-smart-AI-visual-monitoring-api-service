@@ -12,7 +12,11 @@ import { Camera } from '../common/entities/camera.entity';
 describe('EventsService', () => {
   let service: EventsService;
   const mockCamerasRepo = { findOne: jest.fn() };
-  const mockEventsRepo = { create: jest.fn(), save: jest.fn(), findAndCount: jest.fn() };
+  const mockEventsRepo = {
+    create: jest.fn(),
+    save: jest.fn(),
+    findAndCount: jest.fn<Promise<[Event[], number]>>(),
+  };
   const mockRulesService = { evaluate: jest.fn() };
   const mockNotificationsService = { sendTextAlert: jest.fn() };
   const mockPersonsService = { matchOrCreate: jest.fn() };
@@ -124,6 +128,7 @@ describe('EventsService', () => {
 
       expect(mockEventsRepo.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           where: expect.objectContaining({
             created_at: Between(
               new Date('2026-07-13T00:00:00'),
@@ -141,6 +146,7 @@ describe('EventsService', () => {
 
       expect(mockEventsRepo.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           where: expect.objectContaining({
             created_at: Between(
               new Date('2026-07-01T00:00:00'),
@@ -158,6 +164,13 @@ describe('EventsService', () => {
       expect(mockEventsRepo.findAndCount).not.toHaveBeenCalled();
     });
 
+    it('throws BadRequestException for a day-of-month rollover date', async () => {
+      await expect(service.findAll({ date: '2026-02-30' })).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockEventsRepo.findAndCount).not.toHaveBeenCalled();
+    });
+
     it('filters by type when given', async () => {
       mockEventsRepo.findAndCount.mockResolvedValue([[], 0]);
 
@@ -165,6 +178,7 @@ describe('EventsService', () => {
 
       expect(mockEventsRepo.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           where: expect.objectContaining({ event_type: 'person' }),
         }),
       );
@@ -177,6 +191,7 @@ describe('EventsService', () => {
 
       expect(mockEventsRepo.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           where: expect.objectContaining({ zone: 'front_door' }),
         }),
       );
@@ -187,6 +202,7 @@ describe('EventsService', () => {
 
       await service.findAll({ date: '2026-07-01' });
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const callArgs = mockEventsRepo.findAndCount.mock.calls[0][0] as {
         where: Record<string, unknown>;
       };

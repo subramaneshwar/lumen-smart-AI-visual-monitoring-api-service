@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, FindOptionsWhere, Repository } from 'typeorm';
 import * as fs from 'fs';
@@ -86,6 +91,18 @@ export class EventsService {
     const dayStart = new Date(`${dateStr}T00:00:00`);
     const dayEnd = new Date(`${dateStr}T23:59:59.999`);
     if (Number.isNaN(dayStart.getTime())) {
+      throw new BadRequestException(`Invalid date: ${dateStr}`);
+    }
+
+    // Validate that the parsed date's year/month/day match the input
+    // This catches rollovers like '2026-02-30' -> March 2
+    const parts = dateStr.split('-');
+    if (
+      parts.length !== 3 ||
+      dayStart.getFullYear() !== parseInt(parts[0], 10) ||
+      dayStart.getMonth() + 1 !== parseInt(parts[1], 10) ||
+      dayStart.getDate() !== parseInt(parts[2], 10)
+    ) {
       throw new BadRequestException(`Invalid date: ${dateStr}`);
     }
 
