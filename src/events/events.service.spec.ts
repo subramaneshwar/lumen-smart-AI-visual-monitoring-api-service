@@ -15,7 +15,7 @@ describe('EventsService', () => {
   const mockEventsRepo = {
     create: jest.fn(),
     save: jest.fn(),
-    findAndCount: jest.fn<Promise<[Event[], number]>>(),
+    findAndCount: jest.fn<Promise<[Event[], number]>, [unknown]>(),
   };
   const mockRulesService = { evaluate: jest.fn() };
   const mockNotificationsService = { sendTextAlert: jest.fn() };
@@ -202,7 +202,6 @@ describe('EventsService', () => {
 
       await service.findAll({ date: '2026-07-01' });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const callArgs = mockEventsRepo.findAndCount.mock.calls[0][0] as {
         where: Record<string, unknown>;
       };
