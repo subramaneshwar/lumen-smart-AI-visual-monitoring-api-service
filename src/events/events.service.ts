@@ -1,12 +1,13 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Between, FindOptionsWhere, Repository } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
 import { Event } from '../common/entities/event.entity';
 import { Camera } from '../common/entities/camera.entity';
 import { IngestEventDto } from './dto/ingest-event.dto';
+import { EventSummary, ListEventsResult } from './dto/event-summary.dto';
 import { RulesService } from '../rules/rules.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PersonsService } from '../persons/persons.service';
@@ -72,6 +73,72 @@ export class EventsService {
     }
 
     return saved;
+  }
+
+  async findAll(filters: {
+    date?: string;
+    type?: string;
+    zone?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<ListEventsResult> {
+    const dateStr = filters.date ?? this.todayDateString();
+    const dayStart = new Date(`${dateStr}T00:00:00`);
+    const dayEnd = new Date(`${dateStr}T23:59:59.999`);
+    if (Number.isNaN(dayStart.getTime())) {
+      throw new BadRequestException(`Invalid date: ${dateStr}`);
+    }
+
+    const page = filters.page && filters.page > 0 ? filters.page : 1;
+    const limit =
+      filters.limit && filters.limit > 0 ? Math.min(filters.limit, 100) : 50;
+
+    const where: FindOptionsWhere<Event> = {
+      created_at: Between(dayStart, dayEnd),
+    };
+    if (filters.type) {
+      where.event_type = filters.type;
+    }
+    if (filters.zone) {
+      where.zone = filters.zone;
+    }
+
+    const [events, total] = await this.events.findAndCount({
+      where,
+      relations: { person: true },
+      order: { created_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      events: events.map((event) => this.toSummary(event)),
+      page,
+      limit,
+      total,
+    };
+  }
+
+  private toSummary(event: Event): EventSummary {
+    return {
+      id: event.id,
+      event_type: event.event_type,
+      confidence: event.confidence,
+      zone: event.zone,
+      action_taken: event.action_taken,
+      created_at: event.created_at,
+      person: event.person
+        ? { id: event.person.id, visit_count: event.person.visit_count }
+        : null,
+    };
+  }
+
+  private todayDateString(): string {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
   }
 
   saveClipFile(file: Express.Multer.File): string {
