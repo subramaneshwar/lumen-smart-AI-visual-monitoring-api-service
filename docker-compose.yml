@@ -33,6 +33,17 @@ services:
       timeout: 5s
       retries: 5
 
+  adminer:
+    image: adminer:latest
+    container_name: lumen-adminer
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - '8082:8080'
+    depends_on:
+      - postgres
+
 volumes:
   lumen_postgres_data:
   lumen_redis_data:
