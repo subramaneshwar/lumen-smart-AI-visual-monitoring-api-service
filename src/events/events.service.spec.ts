@@ -15,7 +15,7 @@ describe('EventsService', () => {
   const mockEventsRepo = {
     create: jest.fn(),
     save: jest.fn(),
-    findAndCount: jest.fn<Promise<[Partial<Event>[], number]>, [unknown]>(),
+    findAndCount: jest.fn<Promise<[unknown[], number]>, [unknown]>(),
   };
   const mockRulesService = { evaluate: jest.fn() };
   const mockNotificationsService = { sendTextAlert: jest.fn() };
