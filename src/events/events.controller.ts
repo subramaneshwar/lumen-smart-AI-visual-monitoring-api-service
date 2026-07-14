@@ -4,9 +4,9 @@ import {
   Controller,
   Get,
   HttpCode,
-  HttpException,
   HttpStatus,
   Post,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -14,14 +14,21 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { EventsService } from './events.service';
 import { IngestEventDto } from './dto/ingest-event.dto';
 import { AttachClipDto } from './dto/attach-clip.dto';
+import { ListEventsQueryDto } from './dto/list-events-query.dto';
 
 @Controller('events')
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
   @Get()
-  findAll(): never {
-    throw new HttpException('Not implemented yet', HttpStatus.NOT_IMPLEMENTED);
+  async findAll(@Query() query: ListEventsQueryDto) {
+    return await this.eventsService.findAll({
+      date: query.date,
+      type: query.type,
+      zone: query.zone,
+      page: query.page ? Number(query.page) : undefined,
+      limit: query.limit ? Number(query.limit) : undefined,
+    });
   }
 
   @Post('ingest')

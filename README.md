@@ -1,6 +1,6 @@
 # lumen-api
 
-NestJS backend for the AI Visual Monitoring Platform. This is the foundational scaffold — domain routes return `501 Not Implemented` until Phase 1 feature work fills them in.
+NestJS backend for the AI Visual Monitoring Platform. Phase 1 (MVP) is in progress: ingestion, detection events, rules, notifications, retention, and person-matching are implemented; `GET /events` lists/filters stored events for the dashboard. Some routes (`/persons`, `/rules`, `/summaries`, `/chat`) still return `501 Not Implemented`.
 
 ## Prerequisites
 - Node.js 22+, npm
