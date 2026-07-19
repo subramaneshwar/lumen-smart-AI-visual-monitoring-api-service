@@ -23,6 +23,7 @@
     "migration:revert": "npm run typeorm -- migration:revert"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.112.3",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
@@ -36,6 +37,7 @@
     "ioredis": "^5.11.1",
     "multer": "^2.2.0",
     "nestjs-pino": "^4.6.1",
+    "openai": "^6.48.0",
     "pg": "^8.22.0",
     "pino-http": "^11.0.0",
     "pino-pretty": "^13.1.3",
