@@ -16,6 +16,7 @@ import { EventSummary, ListEventsResult } from './dto/event-summary.dto';
 import { RulesService } from '../rules/rules.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PersonsService } from '../persons/persons.service';
+import { todayDateString } from '../common/date.util';
 
 @Injectable()
 export class EventsService {
@@ -87,7 +88,7 @@ export class EventsService {
     page?: number;
     limit?: number;
   }): Promise<ListEventsResult> {
-    const dateStr = filters.date ?? this.todayDateString();
+    const dateStr = filters.date ?? todayDateString();
     const dayStart = new Date(`${dateStr}T00:00:00`);
     const dayEnd = new Date(`${dateStr}T23:59:59.999`);
     if (Number.isNaN(dayStart.getTime())) {
@@ -148,14 +149,6 @@ export class EventsService {
         ? { id: event.person.id, visit_count: event.person.visit_count }
         : null,
     };
-  }
-
-  private todayDateString(): string {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
   }
 
   saveClipFile(file: Express.Multer.File): string {

@@ -18,9 +18,9 @@ export class NotificationLog {
   @JoinColumn({ name: 'org_id' })
   organization: Organization;
 
-  @ManyToOne(() => Event)
+  @ManyToOne(() => Event, { nullable: true })
   @JoinColumn({ name: 'event_id' })
-  event: Event;
+  event: Event | null;
 
   @Column({ type: 'text', nullable: true })
   channel: string | null;

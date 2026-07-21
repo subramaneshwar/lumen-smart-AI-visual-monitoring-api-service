@@ -7,6 +7,7 @@ import * as path from 'path';
 import { NotificationsService } from './notifications.service';
 import { NotificationLog } from '../common/entities/notification-log.entity';
 import { Event } from '../common/entities/event.entity';
+import { Organization } from '../common/entities/organization.entity';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
@@ -95,5 +96,41 @@ describe('NotificationsService', () => {
       expect.objectContaining({ channel: 'telegram', status: 'failed' }),
     );
     fs.unlinkSync(tmpFile);
+  });
+
+  it('logs a sent notification (with no event) when sendText succeeds', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({ ok: true });
+    const organization = { id: 'org-1' } as Organization;
+
+    await service.sendText('Today: 1 person detected.', organization);
+
+    expect(mockLogsRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organization,
+        event: null,
+        channel: 'telegram',
+        status: 'sent',
+      }),
+    );
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/sendMessage'),
+      expect.objectContaining({
+        body: JSON.stringify({
+          chat_id: '778570911',
+          text: 'Today: 1 person detected.',
+        }),
+      }),
+    );
+  });
+
+  it('logs a failed notification when sendText fails', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 500 });
+    const organization = { id: 'org-1' } as Organization;
+
+    await service.sendText('Today: 1 person detected.', organization);
+
+    expect(mockLogsRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ event: null, status: 'failed' }),
+    );
   });
 });
