@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import { NotificationLog } from '../common/entities/notification-log.entity';
 import { Event } from '../common/entities/event.entity';
+import { Organization } from '../common/entities/organization.entity';
 
 @Injectable()
 export class NotificationsService {
@@ -29,12 +30,12 @@ export class NotificationsService {
       if (!response.ok) {
         throw new Error(`Telegram responded with ${response.status}`);
       }
-      await this.logAttempt(event, 'sent');
+      await this.logAttempt(event.organization, event, 'sent');
     } catch (error) {
       this.logger.error(
         `Failed to send Telegram text alert: ${(error as Error).message}`,
       );
-      await this.logAttempt(event, 'failed');
+      await this.logAttempt(event.organization, event, 'failed');
     }
   }
 
@@ -56,27 +57,42 @@ export class NotificationsService {
       if (!response.ok) {
         throw new Error(`Telegram responded with ${response.status}`);
       }
-      await this.logAttempt(event, 'sent');
+      await this.logAttempt(event.organization, event, 'sent');
     } catch (error) {
       this.logger.error(
         `Failed to send Telegram video alert: ${(error as Error).message}`,
       );
-      await this.logAttempt(event, 'failed');
+      await this.logAttempt(event.organization, event, 'failed');
     }
   }
 
   private async logAttempt(
-    event: Event,
+    organization: Organization,
+    event: Event | null,
     status: 'sent' | 'failed',
   ): Promise<void> {
     await this.logs.save(
-      this.logs.create({
-        organization: event.organization,
-        event,
-        channel: 'telegram',
-        status,
-      }),
+      this.logs.create({ organization, event, channel: 'telegram', status }),
     );
+  }
+
+  async sendText(message: string, organization: Organization): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl()}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: this.chatId(), text: message }),
+      });
+      if (!response.ok) {
+        throw new Error(`Telegram responded with ${response.status}`);
+      }
+      await this.logAttempt(organization, null, 'sent');
+    } catch (error) {
+      this.logger.error(
+        `Failed to send Telegram text message: ${(error as Error).message}`,
+      );
+      await this.logAttempt(organization, null, 'failed');
+    }
   }
 
   private formatMessage(event: Event): string {
