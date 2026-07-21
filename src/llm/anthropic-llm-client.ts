@@ -6,17 +6,25 @@ import {
 } from './llm-client.interface';
 
 export class AnthropicLlmClient implements LlmClient {
-  private readonly client: Anthropic;
+  private client: Anthropic | undefined;
+  private readonly apiKey: string;
   private readonly model: string;
 
   constructor(apiKey: string, model: string) {
-    this.client = new Anthropic({ apiKey });
+    this.apiKey = apiKey;
     this.model = model;
+  }
+
+  private getClient(): Anthropic {
+    if (!this.client) {
+      this.client = new Anthropic({ apiKey: this.apiKey });
+    }
+    return this.client;
   }
 
   async generate({ system, prompt }: LlmGenerateParams): Promise<string> {
     try {
-      const response = await this.client.messages.create({
+      const response = await this.getClient().messages.create({
         model: this.model,
         max_tokens: 1024,
         system,

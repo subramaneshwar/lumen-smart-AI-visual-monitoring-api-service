@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { InternalServerErrorException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { SummariesService } from './summaries.service';
 import { Summary } from '../common/entities/summary.entity';
@@ -15,6 +16,7 @@ describe('SummariesService', () => {
     create: jest.fn((x: unknown) => x),
     save: jest.fn((x: unknown) => Promise.resolve(x)),
     find: jest.fn(),
+    findOne: jest.fn(),
   };
   const mockOrgRepo = { findOneOrFail: jest.fn() };
   const mockEventsService = { findAll: jest.fn() };
@@ -35,6 +37,7 @@ describe('SummariesService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     mockOrgRepo.findOneOrFail.mockResolvedValue(org);
+    mockSummariesRepo.findOne.mockResolvedValue(null);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -158,6 +161,53 @@ describe('SummariesService', () => {
       expect.objectContaining({
         where: expect.objectContaining({ period: 'daily' }),
       }),
+    );
+  });
+
+  it('updates an existing row instead of creating a duplicate when a summary already exists for the date', async () => {
+    mockEventsService.findAll.mockResolvedValue({
+      events: [],
+      page: 1,
+      limit: 50,
+      total: 0,
+    });
+    const existing = {
+      id: 'sum-1',
+      organization: org,
+      period: 'daily',
+      date: '2026-01-01',
+      content: 'old content',
+    };
+    mockSummariesRepo.findOne.mockResolvedValue(existing);
+
+    const result = await service.generateDailySummary('2026-01-01');
+
+    expect(mockSummariesRepo.create).not.toHaveBeenCalled();
+    expect(mockSummariesRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'sum-1', content: 'No activity detected.' }),
+    );
+    expect(result.content).toBe('No activity detected.');
+  });
+
+  it('falls back to a fixed message when the LLM returns empty content', async () => {
+    mockEventsService.findAll.mockResolvedValue({
+      events: [makeEventSummary()],
+      page: 1,
+      limit: 50,
+      total: 1,
+    });
+    (mockLlmClient.generate as jest.Mock).mockResolvedValue('   ');
+
+    const result = await service.generateDailySummary('2026-01-01');
+
+    expect(result.content).toBe('Summary generation returned empty content.');
+  });
+
+  it('throws InternalServerErrorException when no organization is configured', async () => {
+    mockOrgRepo.findOneOrFail.mockRejectedValue(new Error('no rows'));
+
+    await expect(service.generateDailySummary('2026-01-01')).rejects.toThrow(
+      InternalServerErrorException,
     );
   });
 });

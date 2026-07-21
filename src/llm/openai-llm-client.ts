@@ -6,12 +6,20 @@ import {
 } from './llm-client.interface';
 
 export class OpenAiLlmClient implements LlmClient {
-  private readonly client: OpenAI;
+  private client: OpenAI | undefined;
+  private readonly apiKey: string;
   private readonly model: string;
 
   constructor(apiKey: string, model: string) {
-    this.client = new OpenAI({ apiKey });
+    this.apiKey = apiKey;
     this.model = model;
+  }
+
+  private getClient(): OpenAI {
+    if (!this.client) {
+      this.client = new OpenAI({ apiKey: this.apiKey });
+    }
+    return this.client;
   }
 
   async generate({ system, prompt }: LlmGenerateParams): Promise<string> {
@@ -23,7 +31,7 @@ export class OpenAiLlmClient implements LlmClient {
           ]
         : [{ role: 'user' as const, content: prompt }];
 
-      const response = await this.client.chat.completions.create({
+      const response = await this.getClient().chat.completions.create({
         model: this.model,
         messages,
       });

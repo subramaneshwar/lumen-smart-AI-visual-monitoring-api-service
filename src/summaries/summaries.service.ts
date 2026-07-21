@@ -1,4 +1,9 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cron } from '@nestjs/schedule';
@@ -9,11 +14,13 @@ import { EventSummary } from '../events/dto/event-summary.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { LLM_CLIENT } from '../llm/llm-client.interface';
 import type { LlmClient } from '../llm/llm-client.interface';
+import { todayDateString } from '../common/date.util';
 
 const SUMMARY_SYSTEM_PROMPT =
   'You are a home security assistant. Write a short, friendly, natural-language recap of the events below for the property owner. Do not invent events that are not listed.';
 const NO_ACTIVITY_CONTENT = 'No activity detected.';
 const FAILURE_CONTENT = 'Summary generation failed — see logs.';
+const EMPTY_CONTENT = 'Summary generation returned empty content.';
 
 @Injectable()
 export class SummariesService {
@@ -41,7 +48,18 @@ export class SummariesService {
   }
 
   async generateDailySummary(date?: string): Promise<Summary> {
-    const resolvedDate = date ?? this.todayDateString();
+    const resolvedDate = date ?? todayDateString();
+
+    let organization: Organization;
+    try {
+      organization = await this.organizations.findOneOrFail({ where: {} });
+    } catch (error) {
+      this.logger.error(
+        `No organization configured: ${(error as Error).message}`,
+      );
+      throw new InternalServerErrorException('No organization configured');
+    }
+
     const { events } = await this.eventsService.findAll({
       date: resolvedDate,
     });
@@ -51,10 +69,11 @@ export class SummariesService {
       content = NO_ACTIVITY_CONTENT;
     } else {
       try {
-        content = await this.llmClient.generate({
+        const generated = await this.llmClient.generate({
           system: SUMMARY_SYSTEM_PROMPT,
           prompt: this.buildSummaryPrompt(events),
         });
+        content = generated.trim().length > 0 ? generated : EMPTY_CONTENT;
       } catch (error) {
         this.logger.error(
           `Daily summary generation failed for ${resolvedDate}: ${(error as Error).message}`,
@@ -63,17 +82,23 @@ export class SummariesService {
       }
     }
 
-    const organization = await this.organizations.findOneOrFail({
-      where: {},
-    });
-    const saved = await this.summaries.save(
-      this.summaries.create({
-        organization,
+    const existing = await this.summaries.findOne({
+      where: {
+        organization: { id: organization.id },
         period: 'daily',
         date: resolvedDate,
-        content,
-      }),
-    );
+      },
+    });
+    const saved = existing
+      ? await this.summaries.save({ ...existing, content })
+      : await this.summaries.save(
+          this.summaries.create({
+            organization,
+            period: 'daily',
+            date: resolvedDate,
+            content,
+          }),
+        );
 
     await this.notificationsService.sendText(content, organization);
 
@@ -84,7 +109,7 @@ export class SummariesService {
     period = 'daily',
     date?: string,
   ): Promise<Summary[]> {
-    const resolvedDate = date ?? this.todayDateString();
+    const resolvedDate = date ?? todayDateString();
     return this.summaries.find({
       where: { period, date: resolvedDate },
       order: { created_at: 'DESC' },
@@ -101,13 +126,5 @@ export class SummariesService {
       return `- ${time}: ${event.event_type}${zone}${person}`;
     });
     return `Today's detected events:\n${lines.join('\n')}`;
-  }
-
-  private todayDateString(): string {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
   }
 }
