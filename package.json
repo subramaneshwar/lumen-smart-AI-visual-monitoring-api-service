@@ -20,7 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "typeorm": "typeorm-ts-node-commonjs -d src/data-source.ts",
     "migration:run": "npm run typeorm -- migration:run",
-    "migration:revert": "npm run typeorm -- migration:revert"
+    "migration:revert": "npm run typeorm -- migration:revert",
+    "backfill:event-embeddings": "ts-node -r tsconfig-paths/register src/scripts/backfill-event-embeddings.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.3",
