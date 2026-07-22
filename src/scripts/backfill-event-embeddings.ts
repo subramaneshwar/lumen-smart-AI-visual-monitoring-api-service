@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { In, IsNull, Not, Repository } from 'typeorm';
 import { AppModule } from '../app.module';
 import { Event } from '../common/entities/event.entity';
 import { EmbeddingService } from '../events/embedding.service';
@@ -15,13 +15,15 @@ export async function backfillEventEmbeddings(
 ): Promise<{ embedded: number; failed: number }> {
   let embedded = 0;
   let failed = 0;
-  let skip = 0;
+  const failedIds: string[] = [];
 
   while (true) {
     const batch = await events.find({
-      where: { description_embedding: IsNull() },
+      where: {
+        description_embedding: IsNull(),
+        ...(failedIds.length > 0 ? { id: Not(In(failedIds)) } : {}),
+      },
       order: { created_at: 'ASC' },
-      skip,
       take: BATCH_SIZE,
     });
     if (batch.length === 0) {
@@ -37,10 +39,9 @@ export async function backfillEventEmbeddings(
           `Failed to embed event ${event.id}: ${(error as Error).message}`,
         );
         failed += 1;
+        failedIds.push(event.id);
       }
     }
-
-    skip += batch.length;
   }
 
   return { embedded, failed };

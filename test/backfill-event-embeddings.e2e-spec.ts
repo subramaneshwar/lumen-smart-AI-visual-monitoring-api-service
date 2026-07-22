@@ -83,4 +83,37 @@ describe('backfillEventEmbeddings (e2e)', () => {
       expect(row.description_embedding).not.toBeNull();
     }
   });
+
+  it('processes more than BATCH_SIZE (100) pending rows without skipping any', async () => {
+    (mockEmbeddingClient.embed as jest.Mock).mockResolvedValue(
+      Array(384).fill(0.001),
+    );
+
+    const rowCount = 110;
+    const values = Array.from({ length: rowCount })
+      .map(() => `($1, 'person', 0.5)`)
+      .join(', ');
+    const insertResult: { id: string }[] = await dataSource.query(
+      `INSERT INTO events (camera_id, event_type, confidence) VALUES ${values} RETURNING id`,
+      [cameraId],
+    );
+    const seededIds = insertResult.map((row) => row.id);
+    expect(seededIds).toHaveLength(rowCount);
+
+    const { failed } = await backfillEventEmbeddings(
+      eventsRepo,
+      embeddingService,
+    );
+    expect(failed).toBe(0);
+
+    const rows: { description_embedding: string | null }[] =
+      await dataSource.query(
+        'SELECT description_embedding FROM events WHERE id = ANY($1)',
+        [seededIds],
+      );
+    expect(rows).toHaveLength(rowCount);
+    for (const row of rows) {
+      expect(row.description_embedding).not.toBeNull();
+    }
+  });
 });
