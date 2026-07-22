@@ -16,6 +16,7 @@ import { EventSummary, ListEventsResult } from './dto/event-summary.dto';
 import { RulesService } from '../rules/rules.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PersonsService } from '../persons/persons.service';
+import { EmbeddingService } from './embedding.service';
 import { todayDateString } from '../common/date.util';
 
 @Injectable()
@@ -28,6 +29,7 @@ export class EventsService {
     private readonly rulesService: RulesService,
     private readonly notificationsService: NotificationsService,
     private readonly personsService: PersonsService,
+    private readonly embeddingService: EmbeddingService,
   ) {}
 
   async ingest(dto: IngestEventDto): Promise<Event> {
@@ -76,6 +78,14 @@ export class EventsService {
           `Person matching failed for event ${saved.id}: ${(error as Error).message}`,
         );
       }
+    }
+
+    try {
+      await this.embeddingService.embedEvent(saved);
+    } catch (error) {
+      this.logger.error(
+        `Embedding generation failed for event ${saved.id}: ${(error as Error).message}`,
+      );
     }
 
     return saved;

@@ -6,6 +6,7 @@ import { EventsService } from './events.service';
 import { RulesService } from '../rules/rules.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PersonsService } from '../persons/persons.service';
+import { EmbeddingService } from './embedding.service';
 import { Event } from '../common/entities/event.entity';
 import { Camera } from '../common/entities/camera.entity';
 
@@ -20,6 +21,7 @@ describe('EventsService', () => {
   const mockRulesService = { evaluate: jest.fn() };
   const mockNotificationsService = { sendTextAlert: jest.fn() };
   const mockPersonsService = { matchOrCreate: jest.fn() };
+  const mockEmbeddingService = { embedEvent: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -31,6 +33,7 @@ describe('EventsService', () => {
         { provide: RulesService, useValue: mockRulesService },
         { provide: NotificationsService, useValue: mockNotificationsService },
         { provide: PersonsService, useValue: mockPersonsService },
+        { provide: EmbeddingService, useValue: mockEmbeddingService },
       ],
     }).compile();
     service = module.get<EventsService>(EventsService);
@@ -107,6 +110,37 @@ describe('EventsService', () => {
 
     expect(mockRulesService.evaluate).toHaveBeenCalled();
     expect(mockNotificationsService.sendTextAlert).not.toHaveBeenCalled();
+    expect(result).toEqual(
+      expect.objectContaining({
+        id: 'evt-1',
+        event_type: 'person',
+      }),
+    );
+  });
+
+  it('still returns the saved event when embedding generation throws', async () => {
+    const camera = { id: 'cam-1', organization: { id: 'org-1' } } as Camera;
+    mockCamerasRepo.findOne.mockResolvedValue(camera);
+    mockEventsRepo.create.mockImplementation(
+      (data: Record<string, unknown>) => data,
+    );
+    mockRulesService.evaluate.mockResolvedValue('record_only');
+    mockEmbeddingService.embedEvent.mockRejectedValue(
+      new Error('rate limited'),
+    );
+
+    const saveImplementation = (data: Record<string, unknown>) =>
+      Promise.resolve({ id: 'evt-1', ...data } as Event);
+    mockEventsRepo.save.mockImplementation(saveImplementation);
+
+    const result = await service.ingest({
+      camera_id: 'cam-1',
+      event_type: 'person',
+      confidence: 0.9,
+      clip_path: 'x.mp4',
+    });
+
+    expect(mockEmbeddingService.embedEvent).toHaveBeenCalled();
     expect(result).toEqual(
       expect.objectContaining({
         id: 'evt-1',
