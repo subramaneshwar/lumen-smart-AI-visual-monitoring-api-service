@@ -9,7 +9,10 @@ import {
   EMBEDDING_CLIENT,
   EmbeddingClient,
 } from '../src/llm/embedding-client.interface';
-import { backfillEventEmbeddings } from '../src/scripts/backfill-event-embeddings';
+import {
+  backfillEventEmbeddings,
+  bootstrap,
+} from '../src/scripts/backfill-event-embeddings';
 
 describe('backfillEventEmbeddings (e2e)', () => {
   let dataSource: DataSource;
@@ -115,5 +118,16 @@ describe('backfillEventEmbeddings (e2e)', () => {
     for (const row of rows) {
       expect(row.description_embedding).not.toBeNull();
     }
+  });
+
+  it('bootstrap() resolves EmbeddingService via a real NestFactory application context without throwing', async () => {
+    // No OPENAI_API_KEY is configured in this test environment, so any
+    // pending row's real embed call will fail — the point of this test is
+    // only to prove that bootstrap()'s NestFactory.createApplicationContext
+    // wiring resolves EmbeddingService and the Event repository correctly
+    // end-to-end (distinct from the Test.createTestingModule fixture the
+    // other tests in this file use) and completes without throwing or
+    // hanging, not to prove a successful embedding.
+    await expect(bootstrap()).resolves.toBeUndefined();
   });
 });

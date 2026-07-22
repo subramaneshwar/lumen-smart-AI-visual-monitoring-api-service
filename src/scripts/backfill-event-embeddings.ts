@@ -23,6 +23,7 @@ export async function backfillEventEmbeddings(
         description_embedding: IsNull(),
         ...(failedIds.length > 0 ? { id: Not(In(failedIds)) } : {}),
       },
+      relations: { person: true },
       order: { created_at: 'ASC' },
       take: BATCH_SIZE,
     });
@@ -47,7 +48,7 @@ export async function backfillEventEmbeddings(
   return { embedded, failed };
 }
 
-async function bootstrap(): Promise<void> {
+export async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(AppModule);
   const events = app.get<Repository<Event>>(getRepositoryToken(Event));
   const embeddingService = app.get(EmbeddingService);

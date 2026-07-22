@@ -9,7 +9,7 @@ import {
 
 describe('EmbeddingService', () => {
   let service: EmbeddingService;
-  const mockEventsRepo = { manager: { query: jest.fn() } };
+  const mockEventsRepo = { update: jest.fn() };
   const mockEmbeddingClient: EmbeddingClient = { embed: jest.fn() };
 
   const makeEvent = (overrides: Partial<Event> = {}): Event =>
@@ -36,7 +36,7 @@ describe('EmbeddingService', () => {
 
   const expectedTime = new Date(2026, 0, 1, 10, 15, 0).toLocaleTimeString();
 
-  it('builds a description with a zone and no person, and writes it via raw UPDATE', async () => {
+  it('builds a description with a zone and no person, and writes it via update()', async () => {
     (mockEmbeddingClient.embed as jest.Mock).mockResolvedValue([0.1, 0.2]);
 
     await service.embedEvent(makeEvent());
@@ -44,14 +44,10 @@ describe('EmbeddingService', () => {
     expect(mockEmbeddingClient.embed).toHaveBeenCalledWith(
       `person detected in front_door at ${expectedTime}`,
     );
-    expect(mockEventsRepo.manager.query).toHaveBeenCalledWith(
-      'UPDATE events SET description = $1, description_embedding = $2 WHERE id = $3',
-      [
-        `person detected in front_door at ${expectedTime}`,
-        '[0.1,0.2]',
-        'evt-1',
-      ],
-    );
+    expect(mockEventsRepo.update).toHaveBeenCalledWith('evt-1', {
+      description: `person detected in front_door at ${expectedTime}`,
+      description_embedding: [0.1, 0.2],
+    });
   });
 
   it('appends the known-visitor clause when a zone and a person are both present', async () => {

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Event } from '../common/entities/event.entity';
@@ -7,8 +7,6 @@ import type { EmbeddingClient } from '../llm/embedding-client.interface';
 
 @Injectable()
 export class EmbeddingService {
-  private readonly logger = new Logger(EmbeddingService.name);
-
   constructor(
     @InjectRepository(Event) private readonly events: Repository<Event>,
     @Inject(EMBEDDING_CLIENT)
@@ -18,12 +16,11 @@ export class EmbeddingService {
   async embedEvent(event: Event): Promise<void> {
     const description = this.buildDescription(event);
     const embedding = await this.embeddingClient.embed(description);
-    const vectorLiteral = `[${embedding.join(',')}]`;
 
-    await this.events.manager.query(
-      'UPDATE events SET description = $1, description_embedding = $2 WHERE id = $3',
-      [description, vectorLiteral, event.id],
-    );
+    await this.events.update(event.id, {
+      description,
+      description_embedding: embedding,
+    });
   }
 
   private buildDescription(event: Event): string {
